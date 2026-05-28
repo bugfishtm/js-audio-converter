@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+
+<!-- META INJECTION START -->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="copyright" content="bugfish">
+<meta name="language" content="en">
+<meta name="robots" content="index,follow">
+<meta name="author" content="bugfish, ynvnzmlzaa@gmail.com">
+<meta name="description" content="Browser-based audio converter — convert MP3, WAV, FLAC, OGG, AAC and more between formats with quality settings, batch processing, and no uploads in a single self-contained HTML file.">
+<meta property="og:title" content="Audio Converter">
+<meta property="og:description" content="Browser-based audio converter — convert MP3, WAV, FLAC, OGG, AAC and more between formats with quality settings, batch processing, and no uploads in a single self-contained HTML file.">
+<meta property="og:image" content="/meta.jpg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bugfishtm.github.io/js-audio-converter/">
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "WebSite",
+  "name": "Audio Converter",
+  "url": "https://bugfishtm.github.io/js-audio-converter/"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Audio Converter",
+  "headline": "Audio Converter — Browser-Based Audio Format Converter",
+  "description": "Browser-based audio converter — convert MP3, WAV, FLAC, OGG, AAC and more between formats with quality settings, batch processing, and no uploads in a single self-contained HTML file.",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any (browser-based)",
+  "datePublished": "2026-05-28",
+  "dateModified": "2026-05-28",
+  "author": {
+    "@type": "Person",
+    "name": "Jan-Maurice Dahlmanns"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Bugfish",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "/logo.jpg"
+    }
+  }
+}
+</script>
+<!-- META INJECTION END -->
+<title>Audio Converter</title>
+<style>
+:root {
+  --bg: #111118;
+  --surface: #1c1c28;
+  --surface2: #252535;
+  --border: #2e2e45;
+  --accent: #5b8dee;
+  --text: #e2e2ee;
+  --muted: #888899;
+  --success: #52c78a;
+  --error: #e05555;
+  --warn: #e0a040;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font: 14px/1.5 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+.app { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+header h1 { font-size: 18px; font-weight: 600; color: var(--accent); display: flex; align-items: center; gap: 8px; }
+.grid { display: grid; grid-template-columns: 1fr 270px; gap: 14px; align-items: start; }
+@media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+
+/* Drop zone */
+#drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: border-color .15s, background .15s;
+  margin-bottom: 10px;
+  user-select: none;
+}
+#drop-zone.over, #drop-zone:hover { border-color: var(--accent); background: rgba(91,141,238,0.06); }
+#drop-zone p { color: var(--muted); font-size: 13px; }
+#drop-zone p a { color: var(--accent); text-decoration: underline; }
+#drop-zone small { font-size: 11px; color: var(--muted); opacity: .7; }
+#file-input { display: none; }
+
+/* File list */
+#file-list { display: flex; flex-direction: column; gap: 5px; max-height: 400px; overflow-y: auto; padding-right: 2px; }
+.file-item { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+.fi-icon { font-size: 16px; flex-shrink: 0; }
+.fi-info { flex: 1; min-width: 0; }
+.fi-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fi-meta { font-size: 11px; color: var(--muted); }
+.fi-status { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.st-pending { background: var(--border); }
+.st-working { background: var(--accent); animation: blink .8s ease-in-out infinite; }
+.st-done { background: var(--success); }
+.st-error { background: var(--error); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.fi-del { background: none; border: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; padding: 2px 5px; border-radius: 3px; flex-shrink: 0; }
+.fi-del:hover { color: var(--error); background: rgba(224,85,85,.12); }
+.empty { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+
+/* Settings panel */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.panel-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+.fmt-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
+.fmt-tab { padding: 4px 11px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; font-family: inherit; }
+.fmt-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fmt-tab:disabled { opacity: .35; cursor: default; }
+.sep { height: 1px; background: var(--border); margin: 12px 0; }
+.field { margin-bottom: 9px; }
+.field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+select, input[type=number] { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 4px; padding: 5px 7px; font-size: 12px; font-family: inherit; outline: none; -webkit-appearance: none; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888899'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px; }
+select:focus, input:focus { border-color: var(--accent); }
+.btn { border: none; border-radius: 5px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity .15s; display: inline-block; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn-accent { background: var(--accent); color: #fff; width: 100%; }
+.btn-accent:hover:not(:disabled) { opacity: .85; }
+.btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 3px 9px; font-size: 11px; }
+
+/* Progress */
+.progress { height: 3px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; display: none; }
+.progress.show { display: block; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .25s; }
+#status-msg { font-size: 12px; color: var(--muted); text-align: center; margin-top: 7px; min-height: 18px; }
+
+/* Results */
+#results { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.dl-item { display: flex; align-items: center; gap: 6px; background: rgba(91,141,238,.08); border: 1px solid rgba(91,141,238,.2); border-radius: 5px; padding: 6px 8px; font-size: 12px; }
+.dl-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-size { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+/* Info / warn box */
+.info-box { border-radius: 5px; padding: 8px 10px; font-size: 11px; line-height: 1.6; display: none; margin-top: 8px; }
+.info-box.show { display: block; }
+.info-warn { background: rgba(224,160,64,.12); border: 1px solid rgba(224,160,64,.3); color: var(--warn); }
+.info-ok { background: rgba(82,199,138,.1); border: 1px solid rgba(82,199,138,.25); color: var(--success); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+#clear-btn { padding: 5px 11px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <h1>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+    </svg>
+    Audio Converter
+  </h1>
+  <button class="btn btn-ghost" id="clear-btn">Clear All</button>
+</header>
+
+<div class="grid">
+
+  <!-- Left: drop + file list -->
+  <div>
+    <div id="drop-zone">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 10px;color:var(--muted)">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Drop audio files here or <a id="browse-link">browse</a></p>
+      <small style="display:block;margin-top:5px">Accepts: MP3 · WAV · FLAC · OGG · AAC · M4A · AIFF · OPUS · WebM · WMA and more</small>
+      <input type="file" id="file-input" multiple accept="audio/*,.flac,.aiff,.aif,.opus,.wma,.ape,.wv,.mka,.m4a,.mp4">
+    </div>
+    <div id="file-list"><div class="empty">No files added yet</div></div>
+  </div>
+
+  <!-- Right: settings -->
+  <div>
+    <div class="panel">
+      <div class="panel-title">Output Format</div>
+      <div class="fmt-tabs" id="fmt-tabs">
+        <button class="fmt-tab active" data-fmt="wav">WAV</button>
+        <button class="fmt-tab" data-fmt="mp3" id="mp3-tab">MP3</button>
+        <button class="fmt-tab" data-fmt="webm" id="webm-tab">WebM/Opus</button>
+      </div>
+
+      <!-- WAV settings -->
+      <div id="settings-wav">
+        <div class="field">
+          <label>Sample Rate</label>
+          <select id="wav-sr">
+            <option value="0">Original</option>
+            <option value="8000">8,000 Hz</option>
+            <option value="11025">11,025 Hz</option>
+            <option value="16000">16,000 Hz</option>
+            <option value="22050">22,050 Hz</option>
+            <option value="32000">32,000 Hz</option>
+            <option value="44100" selected>44,100 Hz (CD)</option>
+            <option value="48000">48,000 Hz</option>
+            <option value="96000">96,000 Hz</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Bit Depth</label>
+          <select id="wav-bd">
+            <option value="8">8-bit (unsigned PCM)</option>
+            <option value="16" selected>16-bit (CD quality)</option>
+            <option value="24">24-bit (studio)</option>
+            <option value="32">32-bit float</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Channels</label>
+          <select id="wav-ch">
+            <option value="0">Original</option>
+            <option value="1">Mono (mix down)</option>
+            <option value="2">Stereo</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Normalize</label>
+          <select id="wav-norm">
+            <option value="0">Off</option>
+            <option value="1">Peak normalize to 0 dBFS</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- MP3 settings -->
+      <div id="settings-mp3" style="display:none">
+        <div class="field">
+          <label>Bitrate</label>
+          <select id="mp3-br">
+            <option value="32">32 kbps (voice/lo-fi)</option>
+            <option value="64">64 kbps</option>
+            <option value="96">96 kbps</option>
+            <option value="128" selected>128 kbps (standard)</option>
+            <option value="160">160 kbps</option>
+            <option value="192">192 kbps (high)</option>
+            <option value="224">224 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="320">320 kbps (max)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sample Rate</label>
+          <select id="mp3-sr">
+            <option value="0">Original</option>
+            <option value="22050">22,050 Hz</option>
+            <option value="32000">32,000 Hz</option>
+            <option value="44100" selected>44,100 Hz</option>
+            <option value="48000">48,000 Hz</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Channels</label>
+          <select id="mp3-ch">
+            <option value="0">Original</option>
+            <option value="1">Mono (mix down)</option>
+            <option value="2">Stereo</option>
+          </select>
+        </div>
+        <div class="info-box info-warn show" id="lame-info">
+          ⚠ MP3 encoding requires <strong>lame.min.js</strong> placed next to this file.<br>
+          Download: <strong>github.com/zhuker/lamejs</strong> → lame.min.js
+        </div>
+        <div class="info-box info-ok" id="lame-ok">
+          ✓ lame.min.js loaded — MP3 encoding ready
+        </div>
+      </div>
+
+      <!-- WebM settings -->
+      <div id="settings-webm" style="display:none">
+        <div class="field">
+          <label>Bitrate</label>
+          <select id="webm-br">
+            <option value="32000">32 kbps</option>
+            <option value="64000">64 kbps</option>
+            <option value="96000">96 kbps</option>
+            <option value="128000" selected>128 kbps</option>
+            <option value="192000">192 kbps</option>
+            <option value="256000">256 kbps</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sample Rate</label>
+          <select id="webm-sr">
+            <option value="0">Original</option>
+            <option value="22050">22,050 Hz</option>
+            <option value="44100">44,100 Hz</option>
+            <option value="48000" selected>48,000 Hz</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Channels</label>
+          <select id="webm-ch">
+            <option value="0">Original</option>
+            <option value="1">Mono</option>
+            <option value="2">Stereo</option>
+          </select>
+        </div>
+        <div class="info-box info-warn show">
+          ℹ WebM/Opus encodes in real-time — conversion takes as long as the audio duration.
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <button class="btn btn-accent" id="convert-btn" disabled>Convert</button>
+      <div class="progress" id="progress"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div id="status-msg"></div>
+      <div id="results"></div>
+      <div id="dl-all-wrap" style="display:none;margin-top:6px">
+        <button class="btn btn-ghost" id="dl-all-btn" style="width:100%;font-size:12px">Download All</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// Try to load lame.min.js from same folder (for MP3 encoding)
+(function() {
+  const s = document.createElement('script');
+  s.src = 'lame.min.js';
+  s.onload = function() {
+    if (window.lamejs) {
+      document.getElementById('lame-info').classList.remove('show');
+      document.getElementById('lame-ok').classList.add('show');
+      APP.lameReady = true;
+    }
+  };
+  s.onerror = function() { /* lame.min.js not found, MP3 will warn */ };
+  document.head.appendChild(s);
+})();
+
+const APP = {
+  files: [],
+  format: 'wav',
+  converting: false,
+  lameReady: false,
+  results: [],
+  uidCtr: 0
+};
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const dropZone    = document.getElementById('drop-zone');
+const fileInput   = document.getElementById('file-input');
+const fileListEl  = document.getElementById('file-list');
+const fmtTabsEl   = document.getElementById('fmt-tabs');
+const convertBtn  = document.getElementById('convert-btn');
+const progressEl  = document.getElementById('progress');
+const progressFill = document.getElementById('progress-fill');
+const statusMsg   = document.getElementById('status-msg');
+const resultsEl   = document.getElementById('results');
+const dlAllWrap   = document.getElementById('dl-all-wrap');
+
+// ── Lazy AudioContext ─────────────────────────────────────────────────────────
+let _actx = null;
+function getCtx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_actx.state === 'suspended') _actx.resume();
+  return _actx;
+}
+
+// ── Drop & file input ─────────────────────────────────────────────────────────
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('over'); addFiles([...e.dataTransfer.files]); });
+dropZone.addEventListener('click', () => fileInput.click());
+document.getElementById('browse-link').addEventListener('click', e => { e.stopPropagation(); fileInput.click(); });
+fileInput.addEventListener('change', () => { addFiles([...fileInput.files]); fileInput.value = ''; });
+
+function isAudio(f) {
+  return f.type.startsWith('audio/') || /\.(mp3|wav|flac|ogg|aac|m4a|aiff|aif|opus|webm|wma|ape|wv|mka|mp4)$/i.test(f.name);
+}
+
+function addFiles(list) {
+  list.filter(isAudio).forEach(f => {
+    APP.files.push({ id: ++APP.uidCtr, file: f, name: f.name, size: f.size, status: 'pending', error: null });
+  });
+  renderFiles();
+  updateBtn();
+}
+
+// ── Format tabs ───────────────────────────────────────────────────────────────
+fmtTabsEl.querySelectorAll('.fmt-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (tab.disabled || APP.converting) return;
+    APP.format = tab.dataset.fmt;
+    fmtTabsEl.querySelectorAll('.fmt-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    ['wav','mp3','webm'].forEach(f =>
+      document.getElementById('settings-' + f).style.display = f === APP.format ? '' : 'none'
+    );
+  });
+});
+
+// Disable WebM tab if MediaRecorder unavailable
+if (!window.MediaRecorder) {
+  const wb = document.getElementById('webm-tab');
+  wb.disabled = true;
+  wb.title = 'MediaRecorder not supported in this browser';
+}
+
+// ── Clear all ─────────────────────────────────────────────────────────────────
+document.getElementById('clear-btn').addEventListener('click', () => {
+  if (APP.converting) return;
+  APP.files = []; APP.results = [];
+  renderFiles(); renderResults(); updateBtn();
+  statusMsg.textContent = '';
+  dlAllWrap.style.display = 'none';
+  progressEl.classList.remove('show');
+});
+
+// ── Render file list ──────────────────────────────────────────────────────────
+function renderFiles() {
+  if (!APP.files.length) { fileListEl.innerHTML = '<div class="empty">No files added yet</div>'; return; }
+  fileListEl.innerHTML = APP.files.map(f => `
+    <div class="file-item">
+      <span class="fi-icon">🎵</span>
+      <div class="fi-info">
+        <div class="fi-name" title="${esc(f.name)}">${esc(f.name)}</div>
+        <div class="fi-meta">${ext(f.name)} · ${fmtBytes(f.size)}${f.error ? ` · <span style="color:var(--error)">${esc(f.error)}</span>` : ''}</div>
+      </div>
+      <div class="fi-status ${stCls(f.status)}"></div>
+      <button class="fi-del" data-id="${f.id}" title="Remove">×</button>
+    </div>`).join('');
+  fileListEl.querySelectorAll('.fi-del').forEach(b =>
+    b.addEventListener('click', () => {
+      if (APP.converting) return;
+      APP.files = APP.files.filter(f => f.id !== +b.dataset.id);
+      renderFiles(); updateBtn();
+    })
+  );
+}
+
+function stCls(s) { return {pending:'st-pending',working:'st-working',done:'st-done',error:'st-error'}[s] || 'st-pending'; }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function ext(name) { const m = name.match(/\.([^.]+)$/); return m ? m[1].toUpperCase() : 'AUDIO'; }
+function fmtBytes(n) { return n < 1024 ? n+'B' : n < 1048576 ? (n/1024).toFixed(1)+'KB' : (n/1048576).toFixed(1)+'MB'; }
+function updateBtn() { convertBtn.disabled = !APP.files.length || APP.converting; }
+
+// ── WAV Encoder ───────────────────────────────────────────────────────────────
+function encodeWAV(ab, opts) {
+  const bitDepth = parseInt(opts.bitDepth) || 16;
+  const normalize = opts.normalize === '1';
+  const srcCh = ab.numberOfChannels;
+  let outCh = parseInt(opts.channels) || srcCh;
+  outCh = Math.min(outCh || srcCh, Math.max(1, srcCh));
+
+  let L = Float32Array.from(ab.getChannelData(0));
+  let R = srcCh > 1 ? Float32Array.from(ab.getChannelData(1)) : L;
+
+  // Mix / expand channels
+  let samples;
+  if (outCh === 1) {
+    samples = new Float32Array(L.length);
+    for (let i = 0; i < L.length; i++) samples[i] = srcCh > 1 ? (L[i] + R[i]) / 2 : L[i];
+  } else {
+    // stereo
+    if (srcCh === 1) R = L; // duplicate mono→stereo
+    samples = new Float32Array(L.length * 2);
+    for (let i = 0; i < L.length; i++) { samples[i*2] = L[i]; samples[i*2+1] = R[i]; }
+  }
+
+  if (normalize) {
+    let peak = 0;
+    for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > peak) peak = a; }
+    if (peak > 0 && peak !== 1) for (let i = 0; i < samples.length; i++) samples[i] /= peak;
+  }
+
+  const bps = bitDepth === 32 ? 4 : bitDepth === 24 ? 3 : bitDepth === 8 ? 1 : 2;
+  const dataLen = samples.length * bps;
+  const buf = new ArrayBuffer(44 + dataLen);
+  const v = new DataView(buf);
+  const ws = (off, s) => { for (let i = 0; i < s.length; i++) v.setUint8(off+i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4, 36+dataLen, true);
+  ws(8,'WAVE'); ws(12,'fmt '); v.setUint32(16,16,true);
+  v.setUint16(20, bitDepth===32 ? 3 : 1, true); // IEEE float or PCM
+  v.setUint16(22, outCh, true);
+  v.setUint32(24, ab.sampleRate, true);
+  v.setUint32(28, ab.sampleRate * outCh * bps, true);
+  v.setUint16(32, outCh * bps, true);
+  v.setUint16(34, bitDepth, true);
+  ws(36,'data'); v.setUint32(40, dataLen, true);
+
+  let off = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    if (bitDepth === 8) { v.setUint8(off, Math.round((s+1)*127.5)); off++; }
+    else if (bitDepth === 16) { v.setInt16(off, Math.round(s < 0 ? s*32768 : s*32767), true); off+=2; }
+    else if (bitDepth === 24) {
+      const n = Math.round(s < 0 ? s*8388608 : s*8388607);
+      v.setUint8(off, n&0xFF); v.setUint8(off+1,(n>>8)&0xFF); v.setUint8(off+2,(n>>16)&0xFF); off+=3;
+    }
+    else { v.setFloat32(off, s, true); off+=4; }
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+// ── MP3 Encoder (needs lamejs) ────────────────────────────────────────────────
+function encodeMP3(ab, opts) {
+  if (!window.lamejs) throw new Error('lame.min.js not found — place it next to index.html');
+  const srcCh = ab.numberOfChannels;
+  let channels = parseInt(opts.channels) || Math.min(srcCh, 2);
+  channels = Math.min(channels || 2, 2);
+  const bitrate = parseInt(opts.bitrate) || 128;
+
+  const toI16 = f32 => {
+    const out = new Int16Array(f32.length);
+    for (let i = 0; i < f32.length; i++) {
+      const s = Math.max(-1, Math.min(1, f32[i]));
+      out[i] = Math.round(s < 0 ? s*32768 : s*32767);
+    }
+    return out;
+  };
+
+  let L = ab.getChannelData(0);
+  let R = srcCh > 1 ? ab.getChannelData(1) : ab.getChannelData(0);
+
+  if (channels === 1) {
+    const m = new Float32Array(L.length);
+    for (let i = 0; i < L.length; i++) m[i] = srcCh > 1 ? (L[i]+R[i])/2 : L[i];
+    L = m; R = null;
+  } else if (srcCh === 1) {
+    R = L; // mono → stereo duplicate
+  }
+
+  const li = toI16(L), ri = R ? toI16(R) : null;
+  const enc = new lamejs.Mp3Encoder(channels, ab.sampleRate, bitrate);
+  const chunks = [];
+  const blk = 1152;
+  for (let i = 0; i < li.length; i += blk) {
+    const lc = li.subarray(i, i+blk);
+    const out = ri ? enc.encodeBuffer(lc, ri.subarray(i, i+blk)) : enc.encodeBuffer(lc);
+    if (out.length > 0) chunks.push(new Uint8Array(out));
+  }
+  const tail = enc.flush();
+  if (tail.length > 0) chunks.push(new Uint8Array(tail));
+  return new Blob(chunks, { type: 'audio/mpeg' });
+}
+
+// ── WebM/Opus Encoder (MediaRecorder, real-time) ──────────────────────────────
+function encodeWebM(ab, opts) {
+  return new Promise((resolve, reject) => {
+    const srcCh = ab.numberOfChannels;
+    let outCh = parseInt(opts.channels) || Math.min(srcCh, 2);
+    outCh = Math.max(1, Math.min(outCh || 2, 2));
+    const outSr = parseInt(opts.sampleRate) || ab.sampleRate;
+    const bitrate = parseInt(opts.bitrate) || 128000;
+
+    // Render via OfflineAudioContext (handles resample + channel mix)
+    const offCtx = new OfflineAudioContext(
+      outCh,
+      Math.ceil(ab.duration * outSr),
+      outSr
+    );
+    const src = offCtx.createBufferSource();
+    src.buffer = ab;
+
+    if (outCh === 1 && srcCh > 1) {
+      // Mix stereo→mono via channel merger trick
+      const gain = offCtx.createGain();
+      gain.channelCount = 1;
+      gain.channelCountMode = 'explicit';
+      gain.channelInterpretation = 'speakers';
+      src.connect(gain);
+      gain.connect(offCtx.destination);
+    } else {
+      src.connect(offCtx.destination);
+    }
+    src.start();
+
+    offCtx.startRendering().then(rendered => {
+      const ctx2 = new AudioContext({ sampleRate: outSr });
+      const src2 = ctx2.createBufferSource();
+      src2.buffer = rendered;
+      const dest = ctx2.createMediaStreamDestination();
+      src2.connect(dest);
+
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus' : 'audio/webm';
+      let rec;
+      try { rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: bitrate }); }
+      catch(e) { ctx2.close(); reject(e); return; }
+
+      const parts = [];
+      rec.ondataavailable = e => { if (e.data.size > 0) parts.push(e.data); };
+      rec.onstop = () => { ctx2.close(); resolve(new Blob(parts, { type: mime })); };
+      rec.start(250); // collect every 250ms
+      src2.start();
+      src2.onended = () => setTimeout(() => { try { rec.stop(); } catch(_) {} }, 300);
+    }).catch(e => reject(e));
+  });
+}
+
+// ── Resample via OfflineAudioContext ──────────────────────────────────────────
+async function resample(ab, targetSr) {
+  if (!targetSr || ab.sampleRate === targetSr) return ab;
+  const off = new OfflineAudioContext(ab.numberOfChannels, Math.ceil(ab.duration * targetSr), targetSr);
+  const src = off.createBufferSource();
+  src.buffer = ab;
+  src.connect(off.destination);
+  src.start();
+  return off.startRendering();
+}
+
+// ── Settings getters ──────────────────────────────────────────────────────────
+function getSettings() {
+  if (APP.format === 'wav') return {
+    sampleRate: parseInt(document.getElementById('wav-sr').value),
+    bitDepth:   document.getElementById('wav-bd').value,
+    channels:   document.getElementById('wav-ch').value,
+    normalize:  document.getElementById('wav-norm').value
+  };
+  if (APP.format === 'mp3') return {
+    sampleRate: parseInt(document.getElementById('mp3-sr').value),
+    bitrate:    document.getElementById('mp3-br').value,
+    channels:   document.getElementById('mp3-ch').value
+  };
+  return { // webm
+    sampleRate: parseInt(document.getElementById('webm-sr').value),
+    bitrate:    document.getElementById('webm-br').value,
+    channels:   document.getElementById('webm-ch').value
+  };
+}
+
+function outName(input) {
+  const ext = { wav:'wav', mp3:'mp3', webm:'webm' }[APP.format];
+  return input.replace(/\.[^.]+$/, '') + '.' + ext;
+}
+
+// ── Convert ───────────────────────────────────────────────────────────────────
+convertBtn.addEventListener('click', async () => {
+  if (APP.converting || !APP.files.length) return;
+  if (APP.format === 'mp3' && !APP.lameReady) {
+    statusMsg.textContent = '✗ MP3: lame.min.js not found — see info box above';
+    return;
+  }
+  if (APP.format === 'webm' && !window.MediaRecorder) {
+    statusMsg.textContent = '✗ WebM: MediaRecorder not supported in this browser';
+    return;
+  }
+
+  APP.converting = true; APP.results = [];
+  convertBtn.disabled = true;
+  progressEl.classList.add('show');
+  resultsEl.innerHTML = '';
+  dlAllWrap.style.display = 'none';
+
+  const settings = getSettings();
+  const total = APP.files.length;
+  let done = 0;
+
+  // Reset statuses
+  APP.files.forEach(f => { f.status = 'pending'; f.error = null; });
+
+  for (const f of APP.files) {
+    f.status = 'working'; renderFiles();
+    setProgress(done / total);
+    statusMsg.textContent = `Converting ${done+1} / ${total} — ${f.name}`;
+
+    try {
+      const ab0 = await f.file.arrayBuffer();
+      const ctx = getCtx();
+      let decoded = await new Promise((res, rej) =>
+        ctx.decodeAudioData(ab0, res, rej)
+      );
+
+      // Resample if format needs it (WAV handles channel/normalize internally)
+      if (settings.sampleRate && settings.sampleRate !== decoded.sampleRate) {
+        decoded = await resample(decoded, settings.sampleRate);
+      }
+
+      let blob;
+      if (APP.format === 'wav')  blob = encodeWAV(decoded, settings);
+      else if (APP.format === 'mp3') blob = encodeMP3(decoded, settings);
+      else blob = await encodeWebM(decoded, settings);
+
+      f.status = 'done';
+      APP.results.push({ name: outName(f.name), blob });
+    } catch(e) {
+      f.status = 'error';
+      f.error = e.message || 'Failed';
+      console.error('Conversion error:', f.name, e);
+    }
+
+    done++;
+    setProgress(done / total);
+    renderFiles();
+  }
+
+  APP.converting = false;
+  convertBtn.disabled = false;
+  progressEl.classList.remove('show');
+  const failed = APP.files.filter(f => f.status === 'error').length;
+  statusMsg.textContent = `Done: ${APP.results.length} converted` + (failed ? `, ${failed} failed` : '');
+  renderResults();
+  if (APP.results.length > 1) dlAllWrap.style.display = '';
+});
+
+function setProgress(r) { progressFill.style.width = (r*100).toFixed(1) + '%'; }
+
+// ── Render results ────────────────────────────────────────────────────────────
+function renderResults() {
+  if (!APP.results.length) { resultsEl.innerHTML = ''; return; }
+  resultsEl.innerHTML = APP.results.map((r, i) => `
+    <div class="dl-item">
+      <span class="dl-name" title="${esc(r.name)}">${esc(r.name)}</span>
+      <span class="dl-size">${fmtBytes(r.blob.size)}</span>
+      <button class="btn btn-ghost btn-sm" data-idx="${i}">↓ Save</button>
+    </div>`).join('');
+  resultsEl.querySelectorAll('button[data-idx]').forEach(b =>
+    b.addEventListener('click', () => {
+      const r = APP.results[+b.dataset.idx];
+      dlBlob(r.blob, r.name);
+    })
+  );
+}
+
+document.getElementById('dl-all-btn').addEventListener('click', () => {
+  APP.results.forEach((r, i) => setTimeout(() => dlBlob(r.blob, r.name), i * 300));
+});
+
+function dlBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+</script>
+</body>
+</html>
